@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Directorio Telefónico Judicial</title>
+    
+    <!-- Tailwind CSS para los estilos -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React y ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel para compilar JSX en el navegador -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        /* Mejoras táctiles para celular */
+        input, select, button { touch-action: manipulation; }
+        body { -webkit-tap-highlight-color: transparent; }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans antialiased">
+
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useMemo, useEffect } = React;
+
+        // --- Íconos en formato SVG para no depender de librerías externas ---
+        const IconBuilding = ({className="w-5 h-5"}) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><path d="M9 22v-4h6v4"></path><path d="M8 6h.01"></path><path d="M16 6h.01"></path><path d="M12 6h.01"></path><path d="M12 10h.01"></path><path d="M12 14h.01"></path><path d="M16 10h.01"></path><path d="M16 14h.01"></path><path d="M8 10h.01"></path><path d="M8 14h.01"></path></svg>);
+        const IconSearch = ({className="w-5 h-5"}) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>);
+        const IconFilter = ({className="w-5 h-5"}) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>);
+        const IconPlus = ({className="w-5 h-5"}) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>);
+        const IconUser = ({className="w-5 h-5"}) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>);
+        const IconTag = ({className="w-5 h-5"}) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>);
+        const IconPhone = ({className="w-5 h-5"}) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>);
+        const IconEdit = ({className="w-5 h-5"}) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>);
+        const IconTrash = ({className="w-5 h-5"}) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>);
+        const IconX = ({className="w-5 h-5"}) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>);
+
+        // Datos Iniciales
+        const initialContacts = [
+            { id: '1', name: 'Dr. Portela Leonardo', department: 'Sala Civil - Despacho', category: 'Presidencia', phone: '264' },
+            { id: '2', name: 'Eugenia Schonfel', department: 'Asistente Presidencia', category: 'Presidencia', phone: '264' },
+            { id: '3', name: 'Dra. Mizawak, Claudia M.', department: 'Sala Penal - Despacho', category: 'Vocales', phone: '5240' },
+            { id: '4', name: 'Belén', department: 'Asistente Sala Penal', category: 'Vocales', phone: '5240' },
+            { id: '5', name: 'Dr. Carubia, Daniel O.', department: 'Sala Penal - Despacho', category: 'Vocales', phone: '5234' },
+            { id: '6', name: 'Mauricio Londero', department: 'Asistente Sala Penal', category: 'Vocales', phone: '5234' },
+            { id: '7', name: 'Dr. Giorgio, Miguel Angel', department: 'Sala Penal - Despacho', category: 'Vocales', phone: '5234' },
+            { id: '8', name: 'Pablo Sauer', department: 'Asistente Sala Penal', category: 'Vocales', phone: '5234' },
+            { id: '9', name: 'Dr. Carlomagno Germán R.', department: 'Sala Laboral - Despacho', category: 'Vocales', phone: '5290' },
+            { id: '10', name: 'Cecilia Mendoza', department: 'Asistente Sala Laboral', category: 'Vocales', phone: '5290' },
+            { id: '11', name: 'Dra. Laura Soage', department: 'Sala Laboral - Despacho', category: 'Vocales', phone: '5230' },
+            { id: '12', name: 'Dra. Medina Susana', department: 'Sala Laboral - Despacho', category: 'Vocales', phone: '5233' },
+            { id: '13', name: 'Dra. Schumacher Gisela', department: 'Sala Civil - Despacho', category: 'Vocales', phone: '5239' },
+            { id: '14', name: 'Matias Musante', department: 'Asistente Sala Civil', category: 'Vocales', phone: '5239' },
+            { id: '15', name: 'Dr. Tepsich', department: 'Sala Civil - Despacho', category: 'Vocales', phone: '5239' },
+            { id: '16', name: 'Dra. Salomon, E.', department: 'Superintendencia Nº1', category: 'Secretarías', phone: '202' },
+            { id: '17', name: 'Dr. Simon', department: 'Superintendencia Nº2', category: 'Secretarías', phone: '5258' },
+            { id: '18', name: 'Dra. Alasino', department: 'Contencioso Administrativo', category: 'Secretarías', phone: '204' },
+            { id: '19', name: 'Dra. Arduino, Melina', department: 'Secretaría Sala Penal', category: 'Secretarías', phone: '5221' },
+            { id: '20', name: 'Dra. Aguerrenvengoa', department: 'Secretaría Sala Laboral', category: 'Secretarías', phone: '5249' },
+            { id: '21', name: 'Dr. Emanueli S.', department: 'Secretaría Sala Civil', category: 'Secretarías', phone: '5229' },
+            { id: '22', name: 'Dra. Carmona', department: 'Procuración General', category: 'Secretarías', phone: '308' },
+            { id: '23', name: 'Dra. Bracco, Ana', department: 'Mediación', category: 'Secretarías', phone: '138' },
+            { id: '24', name: 'Mesa de Entradas', department: 'Secretaría Cont. Administrativo', category: 'Secretarías', phone: '247' },
+            { id: '25', name: 'Dr. Gastaldi', department: 'Sala Nº1: Proc. Const. y Penal', category: 'Salas', phone: '5295' },
+            { id: '26', name: 'Dra. Zonis', department: 'Sala Nº1: Proc. Const. y Penal', category: 'Salas', phone: '5219' },
+            { id: '27', name: 'Dra. Affranchino, Andrea', department: 'Sala Nº1: Proc. Const. y Penal', category: 'Salas', phone: '5227' },
+            { id: '28', name: 'Grieco', department: 'Sala Nº2: Civil y Comercial', category: 'Salas', phone: '5394' },
+            { id: '29', name: 'Dra. Mª Eugenia Bautista', department: 'Sala Nº2: Civil y Comercial', category: 'Salas', phone: '5335' },
+            { id: '30', name: 'Dra. Sofía Keller', department: 'Sala Nº2: Civil y Comercial', category: 'Salas', phone: '5444' },
+            { id: '31', name: 'Dra. Díaz', department: 'Sala Nº2: Civil y Comercial', category: 'Salas', phone: '5492' },
+            { id: '32', name: 'Dr. Vergara, Luis Martín', department: 'Sala Nº3: Trabajo', category: 'Salas', phone: '5218' },
+            { id: '33', name: 'Dra. Quinodoz Maria Florencia', department: 'Sala Nº3: Trabajo', category: 'Salas', phone: '5428' },
+            { id: '34', name: 'Dra. Victoria Tito', department: 'Sala Nº3: Trabajo', category: 'Salas', phone: '5217' },
+            { id: '35', name: 'Sala Proc. Const. y Penal', department: 'Salas S.T.J.', category: 'Salas S.T.J.', phone: '5225' },
+            { id: '36', name: 'Sala Civil', department: 'Salas S.T.J.', category: 'Salas S.T.J.', phone: '5228' },
+            { id: '37', name: 'Mesa de Entradas Sala Laboral', department: 'Salas S.T.J.', category: 'Salas S.T.J.', phone: '5230' },
+            { id: '38', name: 'Agentes Sala Laboral', department: 'Salas S.T.J.', category: 'Salas S.T.J.', phone: '5231' },
+            { id: '39', name: 'Dr. Garcia, Jorge Amilcar L.', department: 'Procuración General - Despacho', category: 'Procuración', phone: '318' },
+            { id: '40', name: 'Dra. Carmona', department: 'Procuradora Adjunta', category: 'Procuración', phone: '308' },
+            { id: '41', name: 'Dra. Rosa Alvez Pinheiro', department: 'Procuración – Despacho', category: 'Procuración', phone: '272' },
+            { id: '42', name: 'Equipo Contable', department: 'Procuración General', category: 'Procuración', phone: '100' },
+            { id: '43', name: 'Mesa de Entradas', department: 'Procuración General', category: 'Procuración', phone: '218 - 265' },
+            { id: '44', name: 'Dr. Benitez, Maximiliano F.', department: 'Defensoría STJ – Despacho', category: 'Defensoría', phone: '223' },
+            { id: '45', name: 'Dra. Vittor', department: 'Defensoría General', category: 'Defensoría', phone: '434' },
+            { id: '46', name: 'Mesa de Entradas', department: 'Defensoría General', category: 'Defensoría', phone: '217' },
+            { id: '47', name: 'Dra. Bano', department: 'Defensoría Civil Nº1', category: 'Defensoría', phone: '398' },
+            { id: '48', name: 'Dr. Conti', department: 'Defensoría Civil Nº2', category: 'Defensoría', phone: '350' },
+            { id: '49', name: 'Dr. Cottonaro', department: 'Defensoría Civil Nº3', category: 'Defensoría', phone: '285' },
+            { id: '50', name: 'Dr. Rodriguez Signes', department: 'Defensoría Civil Nº7', category: 'Defensoría', phone: '297' },
+            { id: '51', name: 'Dra. Suárez Schumacher', department: 'Defensoría Civil Nº9', category: 'Defensoría', phone: '334' },
+            { id: '52', name: 'Dr. Lobbosco', department: 'Defensoría Civil Nº14', category: 'Defensoría', phone: '301' },
+            { id: '53', name: 'Dra. Frate', department: 'Defensoría Civil Nº15', category: 'Defensoría', phone: '294' },
+            { id: '54', name: 'Mesa de Entrada', department: 'Defensoría Civil', category: 'Defensoría', phone: '360' },
+            { id: '55', name: 'Defensoría Penal Niños y Adolescentes', department: 'Urquiza 1252', category: 'Defensoría', phone: '4310050/88' },
+            { id: '56', name: 'Defensoría Penal', department: 'Laprida 451', category: 'Defensoría', phone: '4209438' },
+            { id: '57', name: 'Acuerdos', department: 'Oficinas S.T.J.', category: 'Oficinas S.T.J.', phone: '395' },
+            { id: '58', name: 'Lab. de Genética Forense (A.D.N.)', department: 'Oficinas S.T.J.', category: 'Oficinas S.T.J.', phone: '402' },
+            { id: '59', name: 'Alcaldía', department: 'Oficinas S.T.J.', category: 'Oficinas S.T.J.', phone: '281' },
+            { id: '60', name: 'Amparo', department: 'Oficinas S.T.J.', category: 'Oficinas S.T.J.', phone: '5454 - 372' },
+            { id: '61', name: 'Archivo Judicial', department: 'Calle Santo Dominguez', category: 'Oficinas S.T.J.', phone: '4347193' },
+            { id: '62', name: 'Archivo Judicial - Patrimonio', department: 'Oficinas S.T.J.', category: 'Oficinas S.T.J.', phone: '4342457' },
+            { id: '63', name: 'Asociación de Magistrados', department: 'Oficinas S.T.J.', category: 'Oficinas S.T.J.', phone: '4220942' },
+            { id: '64', name: 'Asuntos Administrativos', department: 'Oficinas S.T.J.', category: 'Oficinas S.T.J.', phone: '248 - 335 - 411' },
+            { id: '65', name: 'Biblioteca', department: 'Oficinas S.T.J.', category: 'Oficinas S.T.J.', phone: '245' },
+            { id: '66', name: 'Carpintería', department: 'Oficinas S.T.J.', category: 'Oficinas S.T.J.', phone: '282' },
+            { id: '67', name: 'Ceremonial', department: 'Oficinas S.T.J.', category: 'Oficinas S.T.J.', phone: '205' },
+            { id: '68', name: 'Choferes', department: 'Oficinas S.T.J.', category: 'Oficinas S.T.J.', phone: '472' },
+            { id: '69', name: 'Cocina S.T.J.', department: '2do. Piso', category: 'Oficinas S.T.J.', phone: '215' },
+            { id: '70', name: 'Cocina Contencioso', department: '2do. Piso', category: 'Oficinas S.T.J.', phone: '455' },
+            { id: '71', name: 'Contencioso Administrativo', department: 'Oficinas S.T.J.', category: 'Oficinas S.T.J.', phone: '219' },
+            { id: '72', name: 'Electricistas (Sr. Walter Albertini)', department: 'Oficinas S.T.J.', category: 'Oficinas S.T.J.', phone: '237' },
+            { id: '73', name: 'Encuadernación', department: 'Oficinas S.T.J.', category: 'Oficinas S.T.J.', phone: '373' },
+            { id: '74', name: 'Estadística', department: 'Oficinas S.T.J.', category: 'Oficinas S.T.J.', phone: '396 - 305' },
+            { id: '75', name: 'Genética', department: 'Oficinas S.T.J.', category: 'Oficinas S.T.J.', phone: '418' },
+            { id: '76', name: 'Bioq. Gustavo Martínez (Genética)', department: 'Oficinas S.T.J.', category: 'Oficinas S.T.J.', phone: '325' },
+            { id: '77', name: 'Guardia Policial', department: 'Oficinas S.T.J.', category: 'Oficinas S.T.J.', phone: '365' },
+            { id: '78', name: 'Informática Jurídica', department: 'Oficinas S.T.J.', category: 'Oficinas S.T.J.', phone: '206 - 207' },
+            { id: '79', name: 'Paglioto (Informática)', department: 'Oficinas S.T.J.', category: 'Oficinas S.T.J.', phone: '375' },
+            { id: '80', name: 'Mesa Virtual', department: 'Informática', category: 'Oficinas S.T.J.', phone: '5291' },
+            { id: '81', name: 'Notificaciones electrónica', department: 'Informática', category: 'Oficinas S.T.J.', phone: '348' },
+            { id: '82', name: 'Firma Digital', department: 'Informática', category: 'Oficinas S.T.J.', phone: '479' },
+            { id: '83', name: 'Plataforma Siriri – S.G.P', department: 'Informática', category: 'Oficinas S.T.J.', phone: '465' },
+            { id: '84', name: 'Tasa Judicial', department: 'Informática', category: 'Oficinas S.T.J.', phone: '213' },
+            { id: '85', name: 'Informática forense', department: 'Informática', category: 'Oficinas S.T.J.', phone: '4840786' },
+            { id: '86', name: 'Infraestructura', department: 'Informática', category: 'Oficinas S.T.J.', phone: '5241' },
+            { id: '87', name: 'Inst. Juan B. Alberdi - Mesa Entrada', department: 'Oficina 1', category: 'Oficinas S.T.J.', phone: '320' },
+            { id: '88', name: 'Inst. Juan B. Alberdi', department: 'Oficina 2', category: 'Oficinas S.T.J.', phone: '341' },
+            { id: '89', name: 'Dra. Medina (Dir. Académica)', department: 'Inst. Alberdi', category: 'Oficinas S.T.J.', phone: '233' },
+            { id: '90', name: 'Dra. García Rau (Sec. General)', department: 'Inst. Alberdi', category: 'Oficinas S.T.J.', phone: '232' },
+            { id: '91', name: 'Sala Reuniones', department: 'Inst. Alberdi', category: 'Oficinas S.T.J.', phone: '235' },
+            { id: '92', name: 'Intendencia (Marcelo Borras)', department: 'Oficinas S.T.J.', category: 'Oficinas S.T.J.', phone: '364' },
+            { id: '93', name: 'Juicios por Jurado', department: 'Oficinas S.T.J.', category: 'Oficinas S.T.J.', phone: '290' },
+            { id: '94', name: 'Jurado de Enjuiciamiento', department: 'Oficinas S.T.J.', category: 'Oficinas S.T.J.', phone: '354' },
+            { id: '95', name: 'Jurisprudencia', department: 'Oficinas S.T.J.', category: 'Oficinas S.T.J.', phone: '405' },
+            { id: '96', name: 'Mediación Civil', department: 'Oficinas S.T.J.', category: 'Oficinas S.T.J.', phone: '132' },
+            { id: '97', name: 'Secretaría Dra Bracco', department: 'Mediación Civil', category: 'Oficinas S.T.J.', phone: '138' },
+            { id: '98', name: 'Proveyente', department: 'Mediación Civil', category: 'Oficinas S.T.J.', phone: '139' },
+            { id: '99', name: 'Contadores', department: 'Mediación Civil', category: 'Oficinas S.T.J.', phone: '136' },
+            { id: '100', name: 'Mediación Penal', department: 'Oficinas S.T.J.', category: 'Oficinas S.T.J.', phone: '456' },
+            { id: '101', name: 'Dra Cichero', department: 'Mediación Penal', category: 'Oficinas S.T.J.', phone: '456' },
+            { id: '102', name: 'Dr Santander', department: 'Mediación Penal', category: 'Oficinas S.T.J.', phone: '458' },
+            { id: '103', name: 'Dra Fornara', department: 'Mediación Penal', category: 'Oficinas S.T.J.', phone: '461' },
+            { id: '104', name: 'Dra Diaz Minuet', department: 'Mediación Penal', category: 'Oficinas S.T.J.', phone: '356' },
+            { id: '105', name: 'Dra Degani', department: 'Mediación Penal', category: 'Oficinas S.T.J.', phone: '432' },
+            { id: '106', name: 'Mesa de Información Permanente', department: 'Oficinas S.T.J.', category: 'Oficinas S.T.J.', phone: '361' },
+            { id: '107', name: 'Secretaria MIP', department: 'Oficinas S.T.J.', category: 'Oficinas S.T.J.', phone: '371' },
+            { id: '108', name: 'Mesa Única Informatizada', department: 'Oficinas S.T.J.', category: 'Oficinas S.T.J.', phone: '392' },
+            { id: '109', name: 'Suministro', department: 'Oficinas S.T.J.', category: 'Oficinas S.T.J.', phone: '209' },
+            { id: '110', name: 'Patrimonio', department: 'Oficinas S.T.J.', category: 'Oficinas S.T.J.', phone: '312' },
+            { id: '111', name: 'Postal', department: 'Oficinas S.T.J.', category: 'Oficinas S.T.J.', phone: '413' },
+            { id: '112', name: 'Peritos', department: 'Oficinas S.T.J.', category: 'Oficinas S.T.J.', phone: '409' },
+            { id: '113', name: 'Personal', department: 'Oficinas S.T.J.', category: 'Oficinas S.T.J.', phone: '464' },
+            { id: '114', name: 'Personal Licencia / Fax / Concursos', department: 'Oficinas S.T.J.', category: 'Oficinas S.T.J.', phone: '428 / 268 / 288' },
+            { id: '115', name: 'Dra. Vieyra (Dir. Personal)', department: 'Oficinas S.T.J.', category: 'Oficinas S.T.J.', phone: '487' },
+            { id: '116', name: 'Planeamiento: Arq. Diana Zilly', department: 'Oficinas S.T.J.', category: 'Oficinas S.T.J.', phone: '330 - 439' },
+            { id: '117', name: 'SIC - Prensa', department: 'Oficinas S.T.J.', category: 'Oficinas S.T.J.', phone: '440' },
+            { id: '118', name: 'Carolina Bonino - Prensa', department: 'Oficinas S.T.J.', category: 'Oficinas S.T.J.', phone: '441' },
+            { id: '119', name: 'Salón de Actos', department: 'Oficinas S.T.J.', category: 'Oficinas S.T.J.', phone: '404' },
+            { id: '120', name: 'Sumarios Dra. Daneri', department: 'Oficinas S.T.J.', category: 'Oficinas S.T.J.', phone: '241' },
+            { id: '121', name: 'Taller Efectos Secuestrados', department: 'Oficinas S.T.J.', category: 'Oficinas S.T.J.', phone: '399' },
+            { id: '122', name: 'Mayordomía: Sr. Mildemberger', department: 'Oficinas S.T.J.', category: 'Oficinas S.T.J.', phone: '431' },
+            { id: '123', name: 'Mesa de Entrada', department: 'Notificaciones', category: 'Notificaciones', phone: '7118 - 7116' },
+            { id: '124', name: 'Directora Oficina Notificaciones', department: 'Notificaciones', category: 'Notificaciones', phone: '7117' },
+            { id: '125', name: 'Mesa de Entradas (Baiman)', department: 'Notificaciones', category: 'Notificaciones', phone: '7120' },
+            { id: '126', name: 'Dra. Baiman', department: 'Notificaciones', category: 'Notificaciones', phone: '7121' },
+            { id: '127', name: 'Mesa de Entradas (Izet/Ruth)', department: 'Notificaciones', category: 'Notificaciones', phone: '7122' },
+            { id: '128', name: 'Dra. Izet', department: 'Notificaciones', category: 'Notificaciones', phone: '7125' },
+            { id: '129', name: 'Dra. Ruth', department: 'Notificaciones', category: 'Notificaciones', phone: '7123' },
+            { id: '130', name: 'Mesa de Entradas (Moyano)', department: 'Notificaciones', category: 'Notificaciones', phone: '412' },
+            { id: '131', name: 'Dr. Luis, Moyano', department: 'Notificaciones', category: 'Notificaciones', phone: '410' },
+            { id: '132', name: 'Medicina Laboral', department: 'Salud Ocupacional', category: 'Salud y Contable', phone: '7127' },
+            { id: '133', name: 'Mesa de Entrada', department: 'Salud Ocupacional', category: 'Salud y Contable', phone: '443' },
+            { id: '134', name: 'Of. de Seguridad e Higiene', department: 'Salud Ocupacional', category: 'Salud y Contable', phone: '131' },
+            { id: '135', name: 'Dra. Valeria Moyano - Auditoría Médica', department: 'Salud Ocupacional', category: 'Salud y Contable', phone: '100' },
+            { id: '136', name: 'Contador: Cdor. Koch', department: 'Contaduría', category: 'Salud y Contable', phone: '485' },
+            { id: '137', name: 'Mesa de Entradas', department: 'Contaduría', category: 'Salud y Contable', phone: '210' },
+            { id: '138', name: 'Mesa de Entradas: Gastos', department: 'Contaduría', category: 'Salud y Contable', phone: '213' },
+            { id: '139', name: 'Sueldos', department: 'Contaduría', category: 'Salud y Contable', phone: '214' },
+            { id: '140', name: 'Sub contador: Inveninato', department: 'Contaduría', category: 'Salud y Contable', phone: '212' },
+            { id: '141', name: 'Tesorería (307º)', department: 'Tesorería', category: 'Salud y Contable', phone: '307' },
+            { id: '142', name: 'Cdor. Dayub', department: 'Tesorería', category: 'Salud y Contable', phone: '252' },
+            { id: '143', name: 'Mesa de Entradas', department: 'Tesorería', category: 'Salud y Contable', phone: '346' },
+            { id: '144', name: 'Eq. Contable Superior (Silvina/Andrea)', department: 'Contaduría', category: 'Salud y Contable', phone: '5432' },
+            { id: '145', name: 'Cdora. Piloni', department: 'Contaduría', category: 'Salud y Contable', phone: '287' },
+            { id: '146', name: 'Compras', department: 'Contaduría', category: 'Salud y Contable', phone: '306 - 468' },
+            { id: '147', name: 'Dra. María Carolina Castagno', department: 'Tribunal de Juicio Nº1', category: 'Tribunales y Cámaras', phone: '119' },
+            { id: '148', name: 'Dr. Brugo', department: 'Tribunal de Juicio Nº2', category: 'Tribunales y Cámaras', phone: '480' },
+            { id: '149', name: 'Dr. Alejandro Joel Cánepa', department: 'Tribunal de Juicio Nº3', category: 'Tribunales y Cámaras', phone: '118' },
+            { id: '150', name: 'Dra. Matilde Federik', department: 'Tribunal de Juicio Nº5', category: 'Tribunales y Cámaras', phone: '120' },
+            { id: '151', name: 'Dr. Alejandro Diego Grippo', department: 'Tribunal de Juicio Nº6', category: 'Tribunales y Cámaras', phone: '117' },
+            { id: '152', name: 'Dr. Mauricio Marcelo Mayer', department: 'Tribunal de Juicio Nº7', category: 'Tribunales y Cámaras', phone: '113' },
+            { id: '153', name: 'Dr. Rafael Martín Cotorruelo', department: 'Tribunal de Juicio Nº8', category: 'Tribunales y Cámaras', phone: '116' },
+            { id: '154', name: 'Dr. Gervasio Pablo Labriola', department: 'Tribunal de Juicio Nº9', category: 'Tribunales y Cámaras', phone: '112' },
+            { id: '155', name: 'Dr. Juan Malvasio', department: 'Juez Tribunal', category: 'Tribunales y Cámaras', phone: '332' },
+            { id: '156', name: 'Mesa de Entrada Dra. Guerreyro', department: 'Tribunal de Juicio', category: 'Tribunales y Cámaras', phone: '114 - 115' },
+            { id: '157', name: 'Dra. Marcela Beatriz Badano', department: 'Cámara Casación Penal', category: 'Tribunales y Cámaras', phone: '224' },
+            { id: '158', name: 'Dr. Gustavo Román Pimentel', department: 'Cámara Casación Penal', category: 'Tribunales y Cámaras', phone: '222' },
+            { id: '159', name: 'Dra. Marcela Alejandra Davite de Acuña', department: 'Cámara Casación Penal', category: 'Tribunales y Cámaras', phone: '220' },
+            { id: '160', name: 'Mesa de Entrada', department: 'Cámara Casación Penal', category: 'Tribunales y Cámaras', phone: '225 / 491' },
+            { id: '161', name: 'Asistentes', department: 'Cámara Casación Penal', category: 'Tribunales y Cámaras', phone: '295' },
+            { id: '162', name: 'Dr. Ariel Nicolás Avellaneda', department: 'Cámara Casación Penal', category: 'Tribunales y Cámaras', phone: '454' },
+            { id: '163', name: 'Salón Debate', department: 'Cámara Casación Penal', category: 'Tribunales y Cámaras', phone: '221' },
+            { id: '164', name: 'Dra. Bacaluzzo', department: 'Cámara Casación Penal', category: 'Tribunales y Cámaras', phone: '291' },
+            { id: '165', name: 'Dra. Andrea Morales', department: 'Sala Primera Civil y Com.', category: 'Tribunales y Cámaras', phone: '261' },
+            { id: '166', name: 'Dra. Gabriela T. Mastaglia', department: 'Sala Primera Civil y Com.', category: 'Tribunales y Cámaras', phone: '262' },
+            { id: '167', name: 'Dra. María A. Pereyra', department: 'Sala Primera Civil y Com.', category: 'Tribunales y Cámaras', phone: '143' },
+            { id: '168', name: 'Noelia Estefanía Telagorri', department: 'Secretaría Sala 1', category: 'Tribunales y Cámaras', phone: '263' },
+            { id: '169', name: 'Dr. Edgardo Martín Nicolás Cossy', department: 'Sala Segunda Civil y Com.', category: 'Tribunales y Cámaras', phone: '255' },
+            { id: '170', name: 'Dr. Marcelo Javier Marchesi', department: 'Sala Segunda Civil y Com.', category: 'Tribunales y Cámaras', phone: '236' },
+            { id: '171', name: 'Dra. María Claudia Fiore', department: 'Secretaría Sala 2', category: 'Tribunales y Cámaras', phone: '259' },
+            { id: '172', name: 'Dra. Miotti', department: 'Sala Segunda Civil y Com.', category: 'Tribunales y Cámaras', phone: '256' },
+            { id: '173', name: 'Mesa de Entradas', department: 'Sala Segunda Civil y Com.', category: 'Tribunales y Cámaras', phone: '254' },
+            { id: '174', name: 'Dr. Marfil', department: 'Sala Tercera Civil y Com.', category: 'Tribunales y Cámaras', phone: '211' },
+            { id: '175', name: 'Dra. Ceballos', department: 'Sala Tercera Civil y Com.', category: 'Tribunales y Cámaras', phone: '203' },
+            { id: '176', name: 'Dra. María Valentina Ramirez Amable', department: 'Sala Tercera Civil y Com.', category: 'Tribunales y Cámaras', phone: '208' },
+            { id: '177', name: 'Dra. Sandra A. C. Ciarroca', department: 'Secretaría Sala 3', category: 'Tribunales y Cámaras', phone: '326' },
+            { id: '178', name: 'Mesa de Entradas', department: 'Sala Tercera Civil y Com.', category: 'Tribunales y Cámaras', phone: '267' },
+            { id: '179', name: 'Dra. Fabiola María Livia Bogado Ibarra', department: 'Sala Primera Laboral', category: 'Tribunales y Cámaras', phone: '7105' },
+            { id: '180', name: 'Dra. María Gabriela López Arango', department: 'Sala Primera Laboral', category: 'Tribunales y Cámaras', phone: '7104' },
+            { id: '181', name: 'Dr. Santiago Alberto Morande', department: 'Sala Primera Laboral', category: 'Tribunales y Cámaras', phone: '7106' },
+            { id: '182', name: 'Dra. Carmen Prevedel', department: 'Secretaría Sala 1 Lab.', category: 'Tribunales y Cámaras', phone: '7103' },
+            { id: '183', name: 'Mesa de Entrada', department: 'Sala Primera Laboral', category: 'Tribunales y Cámaras', phone: '7101 - 7102' },
+            { id: '184', name: 'Dr. Guillermo Fernando Bonabotta', department: 'Sala Segunda Laboral', category: 'Tribunales y Cámaras', phone: '7113' },
+            { id: '185', name: 'Dr. Emilio Luján Matorras', department: 'Sala Segunda Laboral', category: 'Tribunales y Cámaras', phone: '7112' },
+            { id: '186', name: 'Dr. Guillermo Leopoldo Federik', department: 'Sala Segunda Laboral', category: 'Tribunales y Cámaras', phone: '7111' },
+            { id: '187', name: 'Dr. Santiago Mario Gutiérrez', department: 'Secretaría Sala 2 Lab.', category: 'Tribunales y Cámaras', phone: '7110' },
+            { id: '188', name: 'Mesa de Entrada', department: 'Sala Segunda Laboral', category: 'Tribunales y Cámaras', phone: '7108 - 7109' },
+            { id: '189', name: 'Mesa de Entradas', department: 'Cámara Cont. Administrativo', category: 'Tribunales y Cámaras', phone: '106' },
+            { id: '190', name: 'Dra. Adriana Beatriz Acevedo', department: 'Cámara Cont. Administrativo', category: 'Tribunales y Cámaras', phone: '107' },
+            { id: '191', name: 'Dr. Hugo Gonzalez Elías', department: 'Cámara Cont. Administrativo', category: 'Tribunales y Cámaras', phone: '108' },
+            { id: '192', name: 'Dr. Pablo Cattaneo', department: 'Secretaría Cont. Admin.', category: 'Tribunales y Cámaras', phone: '101' },
+            { id: '193', name: 'Sala de Audiencias', department: 'Cámara Cont. Administrativo', category: 'Tribunales y Cámaras', phone: '105' },
+            { id: '194', name: 'Proveyentes', department: 'Cámara Cont. Administrativo', category: 'Tribunales y Cámaras', phone: '102 - 103' },
+            { id: '195', name: 'Dra. Marina Electra Barbagelata', department: 'Juzgado Garantías', category: 'Juzgados Penales', phone: '123' },
+            { id: '196', name: 'Dr. José Eduardo Ruhl', department: 'Juzgado Garantías', category: 'Juzgados Penales', phone: '121' },
+            { id: '197', name: 'Dr. Julián Carlos Vergara', department: 'Juzgado Garantías', category: 'Juzgados Penales', phone: '250' },
+            { id: '198', name: 'Dr. Pablo Nicolás Zoff', department: 'Juzgado Garantías', category: 'Juzgados Penales', phone: '480' },
+            { id: '199', name: 'Dra. Elisa Esmeralda Zilli', department: 'Juzgado Garantías Nº6', category: 'Juzgados Penales', phone: '110' },
+            { id: '200', name: 'Dr. Budasoff', department: 'Juzgado Garantías', category: 'Juzgados Penales', phone: '291' },
+            { id: '201', name: 'Dra. Susana María Paola Firpo', department: 'Juzgado Garantías', category: 'Juzgados Penales', phone: '275' },
+            { id: '202', name: 'Dr. Elvio Garzón', department: 'Juzgado Garantías', category: 'Juzgados Penales', phone: '362' },
+            { id: '203', name: 'Dr. Juan H. Carlín', department: 'Juzgado Garantías', category: 'Juzgados Penales', phone: '332' },
+            { id: '204', name: 'Mesa de Entrada', department: 'Juzgados Garantías', category: 'Juzgados Penales', phone: '124' },
+            { id: '205', name: 'Dr. Barbiroto', department: 'Juzgado Penal Niños', category: 'Juzgados Penales', phone: '242' },
+            { id: '206', name: 'Dr. José Ibarzabal', department: 'Secretaría Penal Niños', category: 'Juzgados Penales', phone: '471' },
+            { id: '207', name: 'Mesa de Entradas', department: 'Juzgado Penal Niños', category: 'Juzgados Penales', phone: '238' },
+            { id: '208', name: 'Dra. María Gabriela Garbarino', department: 'Juzgado Ejecución Penas', category: 'Juzgados Penales', phone: '31' },
+            { id: '209', name: 'Dra Marcela Gambaro', department: 'Secretaría Ejecución Penas', category: 'Juzgados Penales', phone: '32' },
+            { id: '210', name: 'Delegados Penitenciarios', department: 'Juzgado Ejecución Penas', category: 'Juzgados Penales', phone: '33' },
+            { id: '211', name: 'Equipo Técnico', department: 'Juzgado Ejecución Penas', category: 'Juzgados Penales', phone: '34' },
+            { id: '212', name: 'Mesa de Entradas', department: 'Juzgado Ejecución Penas', category: 'Juzgados Penales', phone: '35' },
+            { id: '213', name: 'Dra. Claudia Geist', department: 'OGA Coordinación', category: 'Oficinas de Gestión', phone: '277' },
+            { id: '214', name: 'Dr. Ariel Nicolás Avellaneda', department: 'OGA Casación', category: 'Oficinas de Gestión', phone: '454' },
+            { id: '215', name: 'Subdirección Áreas OGA', department: 'OGA (Herlein, Duarte, López, Gambaro, Crespo)', category: 'Oficinas de Gestión', phone: '303' },
+            { id: '216', name: 'Dr. Leandro L. Fermín Bilbao', department: 'OGA Juicios por Jurados', category: 'Oficinas de Gestión', phone: '292' },
+            { id: '217', name: 'Mesa de Entrada', department: 'OGA', category: 'Oficinas de Gestión', phone: '276 / 483' },
+            { id: '218', name: 'Dra. Andrea Cecilia Palavecino', department: 'OGU Civil / Coordinación', category: 'Oficinas de Gestión', phone: '470' },
+            { id: '219', name: 'Dr. Federico Noé', department: 'OGU Laboral', category: 'Oficinas de Gestión', phone: '7130' },
+            { id: '220', name: 'Mesa de Entrada', department: 'OGU', category: 'Oficinas de Gestión', phone: '266 / 342 / 367' },
+            { id: '221', name: 'Dr. Fabricio Amateis', department: 'OMA Director', category: 'Oficinas de Gestión', phone: '286' },
+            { id: '222', name: 'Jorgelina Wustten', department: 'OMA', category: 'Oficinas de Gestión', phone: '463' },
+            { id: '223', name: 'Probation', department: 'OMA', category: 'Oficinas de Gestión', phone: '283' },
+            { id: '224', name: 'Bibiana Starck', department: 'OMA', category: 'Oficinas de Gestión', phone: '459' },
+            { id: '225', name: 'Ma. Eugenia Gerreiro / Maria E Isasi', department: 'OMA', category: 'Oficinas de Gestión', phone: '427' },
+            { id: '226', name: 'Mesa de Entradas', department: 'OMA', category: 'Oficinas de Gestión', phone: '355' },
+            { id: '227', name: 'Dr. Juan Carlos Coglionesse', department: 'Juzgado Civil Nº1', category: 'Juzgados Civiles', phone: '382' },
+            { id: '228', name: 'Dra. Lucila del Huerto Cerini', department: 'Secretaría Civil Nº1', category: 'Juzgados Civiles', phone: '383' },
+            { id: '229', name: 'Mesa de Entradas', department: 'Juzgado Civil Nº1', category: 'Juzgados Civiles', phone: '384' },
+            { id: '230', name: 'Dra. Gabriela Rosana Sione', department: 'Juzgado Civil Nº2', category: 'Juzgados Civiles', phone: '387' },
+            { id: '231', name: 'Dr. Victor Manuel Bertello', department: 'Secretaría Civil Nº2', category: 'Juzgados Civiles', phone: '389' },
+            { id: '232', name: 'Mesa de Entradas', department: 'Juzgado Civil Nº2', category: 'Juzgados Civiles', phone: '386' },
+            { id: '233', name: 'Dra. Pilar Villa', department: 'Juzgado Civil Nº3', category: 'Juzgados Civiles', phone: '377' },
+            { id: '234', name: 'Dra. Celia Enriqueta Gordillo', department: 'Secretaría Civil Nº3', category: 'Juzgados Civiles', phone: '376' },
+            { id: '235', name: 'Mesa de Entradas', department: 'Juzgado Civil Nº3', category: 'Juzgados Civiles', phone: '339' },
+            { id: '236', name: 'Dra Elena Beatriz Albornoz', department: 'Juzgado Civil Nº4', category: 'Juzgados Civiles', phone: '273' },
+            { id: '237', name: 'Dra. Juliana Ortiz Mallo', department: 'Secretaría Civil Nº4', category: 'Juzgados Civiles', phone: '270' },
+            { id: '238', name: 'Mesa de Entradas', department: 'Juzgado Civil Nº4', category: 'Juzgados Civiles', phone: '269' },
+            { id: '239', name: 'Dr. Juan Marcelo Micheloud', department: 'Juzgado Civil Nº5', category: 'Juzgados Civiles', phone: '337' },
+            { id: '240', name: 'Dra. Perla Natalia Klimbovsky', department: 'Secretaría Civil Nº5', category: 'Juzgados Civiles', phone: '340' },
+            { id: '241', name: 'Mesa de Entradas', department: 'Juzgado Civil Nº5', category: 'Juzgados Civiles', phone: '363' },
+            { id: '242', name: 'Dra. Silvina Andrea Rufanacht', department: 'Juzgado Civil Nº6', category: 'Juzgados Civiles', phone: '379' },
+            { id: '243', name: 'Dr. Leandro Barbieri', department: 'Secretaría Civil Nº6', category: 'Juzgados Civiles', phone: '380' },
+            { id: '244', name: 'Mesa de Entradas', department: 'Juzgado Civil Nº6', category: 'Juzgados Civiles', phone: '381' },
+            { id: '245', name: 'Dr. Martín Luis Furman', department: 'Juzgado Civil Nº7', category: 'Juzgados Civiles', phone: '385' },
+            { id: '246', name: 'Dra. Virginia Ofelia Correnti', department: 'Secretaría Civil Nº7', category: 'Juzgados Civiles', phone: '313' },
+            { id: '247', name: 'Mesa de Entradas', department: 'Juzgado Civil Nº7', category: 'Juzgados Civiles', phone: '390' },
+            { id: '248', name: 'Dr Angel Luis Moia', department: 'Juzgado Civil Nº9 Concursos', category: 'Juzgados Civiles', phone: '12' },
+            { id: '249', name: 'Dra. María Victoria Ardoy', department: 'Secretaría Nº1 Juzg. 9', category: 'Juzgados Civiles', phone: '13' },
+            { id: '250', name: 'Dr. Luciano José Tochetti', department: 'Secretaría Nº2 Juzg. 9', category: 'Juzgados Civiles', phone: '16' },
+            { id: '251', name: 'Mesa de Entradas', department: 'Juzgado Civil Nº9', category: 'Juzgados Civiles', phone: '11' },
+            { id: '252', name: 'Dr. Ignacio Martín Basaldúa', department: 'Juzgado Civil Nº10 Ejecuciones', category: 'Juzgados Civiles', phone: '15' },
+            { id: '253', name: 'Dra. Romina Otaño', department: 'Secretaría Nº1 Juzg. 10', category: 'Juzgados Civiles', phone: '17' },
+            { id: '254', name: 'Dra. Mónica S. Atencio', department: 'Secretaría Nº2 Juzg. 10', category: 'Juzgados Civiles', phone: '16' },
+            { id: '255', name: 'Mesa de Entradas', department: 'Juzgado Civil Nº10', category: 'Juzgados Civiles', phone: '14' },
+            { id: '256', name: 'Dra. Gladys Beatriz Pinto', department: 'Juzgado Laboral Nº1', category: 'Juzgados Laborales', phone: '114' },
+            { id: '257', name: 'Dra. María Elena Ramos', department: 'Secretaría Laboral Nº1', category: 'Juzgados Laborales', phone: '113' },
+            { id: '258', name: 'Mesa de Entradas', department: 'Juzgado Laboral Nº1', category: 'Juzgados Laborales', phone: '117' },
+            { id: '259', name: 'Dra. Nanci Adriana Bautista', department: 'Juzgado Laboral Nº2', category: 'Juzgados Laborales', phone: '102' },
+            { id: '260', name: 'Dra. Mónica Patricia Camejo', department: 'Secretaría Laboral Nº2', category: 'Juzgados Laborales', phone: '103' },
+            { id: '261', name: 'Mesa de Entradas', department: 'Juzgado Laboral Nº2', category: 'Juzgados Laborales', phone: '106' },
+            { id: '262', name: 'Dr. Jose Antonio Reviriego', department: 'Juzgado Laboral Nº3', category: 'Juzgados Laborales', phone: '111' },
+            { id: '263', name: 'Dra. Mariela S. Aguerrevengoa', department: 'Secretaría Laboral Nº3', category: 'Juzgados Laborales', phone: '110' },
+            { id: '264', name: 'Mesa de Entradas', department: 'Juzgado Laboral Nº3', category: 'Juzgados Laborales', phone: '108' },
+            { id: '265', name: 'Dra. Alejandra Abud', department: 'Juzgado Laboral Nº4', category: 'Juzgados Laborales', phone: '119' },
+            { id: '266', name: 'Dra. Alejandra Fabiana Villanueva Gomez', department: 'Secretaría Laboral Nº4', category: 'Juzgados Laborales', phone: '118' },
+            { id: '267', name: 'Mesa de Entradas', department: 'Juzgado Laboral Nº4', category: 'Juzgados Laborales', phone: '101' },
+            { id: '268', name: 'Dra Moritán', department: 'Juzgado Familia Nº1', category: 'Juzgados Familia y Paz', phone: '460' },
+            { id: '269', name: 'Dra. Estela Paola de Torres', department: 'Secretaría Familia Nº1', category: 'Juzgados Familia y Paz', phone: '452' },
+            { id: '270', name: 'Mesa de Entradas', department: 'Juzgado Familia Nº1', category: 'Juzgados Familia y Paz', phone: '451' },
+            { id: '271', name: 'E.T.I.', department: 'Juzgado Familia Nº1', category: 'Juzgados Familia y Paz', phone: '476' },
+            { id: '272', name: 'Dra. Ana Cristina Quinteros Fagetti', department: 'Juzgado Familia Nº2', category: 'Juzgados Familia y Paz', phone: '349' },
+            { id: '273', name: 'Dra. María Eleonora Murga', department: 'Juzgado Familia Nº3', category: 'Juzgados Familia y Paz', phone: '422' },
+            { id: '274', name: 'Dr. Juan Ignacio Badano', department: 'Secretaría Familia Nº3', category: 'Juzgados Familia y Paz', phone: '359' },
+            { id: '275', name: 'Mesa de Entrada', department: 'Juzgado Familia Nº3', category: 'Juzgados Familia y Paz', phone: '406' },
+            { id: '276', name: 'E.T.I.', department: 'Juzgado Familia Nº3', category: 'Juzgados Familia y Paz', phone: '230' },
+            { id: '277', name: 'Dra. Fátima E. Peralta', department: 'Juzgado Familia Nº4', category: 'Juzgados Familia y Paz', phone: '450' },
+            { id: '278', name: 'Dra. Ileana Servat Deharbe', department: 'Secretaría Familia Nº4', category: 'Juzgados Familia y Paz', phone: '449' },
+            { id: '279', name: 'Mesa de Entrada', department: 'Juzgado Familia Nº4', category: 'Juzgados Familia y Paz', phone: '447' },
+            { id: '280', name: 'E.T.I.', department: 'Juzgado Familia Nº4', category: 'Juzgados Familia y Paz', phone: '476' },
+            { id: '281', name: 'Dra. Yanina Izet', department: 'Juzgado Familia Nº5', category: 'Juzgados Familia y Paz', phone: '278' },
+            { id: '282', name: 'Dr. Juan Marcelo Micheloud', department: 'Secretaría Familia Nº5', category: 'Juzgados Familia y Paz', phone: '274' },
+            { id: '283', name: 'Mesa de Entradas', department: 'Juzgado Familia Nº5', category: 'Juzgados Familia y Paz', phone: '271' },
+            { id: '284', name: 'Dra. María Virginia Giachello', department: 'Juzgado Paz Nº1', category: 'Juzgados Familia y Paz', phone: '1' },
+            { id: '285', name: 'Dr. Diego Javier Vautier', department: 'Secretaría Paz Nº1', category: 'Juzgados Familia y Paz', phone: '1' },
+            { id: '286', name: 'Dra. Marcela Cottet', department: 'Juzgado Paz Nº2', category: 'Juzgados Familia y Paz', phone: '2' },
+            { id: '287', name: 'Dra. Natalia Bupo O Cuscueta', department: 'Secretaría Paz Nº2', category: 'Juzgados Familia y Paz', phone: '2' },
+            { id: '288', name: 'Dra. Nora Inés Pucheta', department: 'Secretaría Turno Voluntario Paz', category: 'Juzgados Familia y Paz', phone: '3' },
+            { id: '289', name: 'Órgano Revisión (Cabrera/Butus)', department: 'Córdoba 522', category: 'Juzgados Familia y Paz', phone: '4209393' },
+            { id: '290', name: 'Salón N° 1', department: 'Planta Baja', category: 'Salones Audiencia', phone: '321' },
+            { id: '291', name: 'Salón N° 3', department: 'Planta Baja', category: 'Salones Audiencia', phone: '322' },
+            { id: '292', name: 'Salón N° 6', department: 'Civil 1ª piso', category: 'Salones Audiencia', phone: '467' },
+            { id: '293', name: 'Salón N° 7', department: 'Juzgado de familia', category: 'Salones Audiencia', phone: '416' },
+            { id: '294', name: 'Salón N° 11', department: 'Salones', category: 'Salones Audiencia', phone: '427' },
+            { id: '295', name: 'Salón N° 12', department: 'Salones', category: 'Salones Audiencia', phone: '388' },
+            { id: '296', name: 'Salón de Audiencia OGA', department: 'Salones', category: 'Salones Audiencia', phone: '444' },
+            { id: '297', name: 'Salón Oyampé', department: 'Salones', category: 'Salones Audiencia', phone: '475' },
+            { id: '298', name: 'Dr. Jorge García', department: 'Unidad Fiscal', category: 'Unidad Fiscal', phone: '318' },
+            { id: '299', name: 'Dr. Gustavo Morabes', department: 'Unidad Fiscal', category: 'Unidad Fiscal', phone: '486' },
+            { id: '300', name: 'Dra. Mercedes Sobrero', department: 'Unidad Fiscal', category: 'Unidad Fiscal', phone: '318' },
+            { id: '301', name: 'Dr. Pablo Gastiazoro', department: 'Unidad Fiscal', category: 'Unidad Fiscal', phone: '218' },
+            { id: '302', name: 'Tesorería', department: 'Unidad Fiscal', category: 'Unidad Fiscal', phone: '234' },
+            { id: '303', name: 'Dra. Mónica Carmona', department: 'Unidad Fiscal', category: 'Unidad Fiscal', phone: '308' },
+            { id: '304', name: 'Dra. María Elizabeth Bordin', department: 'Unidad Fiscal', category: 'Unidad Fiscal', phone: '226' },
+            { id: '305', name: 'Dr. Franco Bongiovanni', department: 'Unidad Fiscal', category: 'Unidad Fiscal', phone: '119' },
+            { id: '306', name: 'Dr. Facundo Etienot', department: 'Unidad Fiscal', category: 'Unidad Fiscal', phone: '117' },
+            { id: '307', name: 'Dra. Fernanda Ruffatti', department: 'Unidad Fiscal', category: 'Unidad Fiscal', phone: '118' },
+            { id: '308', name: 'Dra. Agustina Pietranera', department: 'Unidad Fiscal', category: 'Unidad Fiscal', phone: '107' },
+            { id: '309', name: 'Mesa de Entrada', department: 'Unidad Fiscal', category: 'Unidad Fiscal', phone: '101' },
+            { id: '310', name: 'Administrativo', department: 'Unidad Fiscal', category: 'Unidad Fiscal', phone: '103' },
+            { id: '311', name: 'Sala de Reuniones', department: 'Unidad Fiscal', category: 'Unidad Fiscal', phone: '124' },
+            { id: '312', name: 'Dra. Eugenia Shmith', department: 'Unidad Fiscal', category: 'Unidad Fiscal', phone: '121' },
+            { id: '313', name: 'Dr. Bruno Gambino', department: 'Unidad Fiscal', category: 'Unidad Fiscal', phone: '122' },
+            { id: '314', name: 'Dr. Leandro Dato', department: 'Unidad Fiscal', category: 'Unidad Fiscal', phone: '123' },
+            { id: '315', name: 'Dra. Elisabet Comas', department: 'Unidad Fiscal', category: 'Unidad Fiscal', phone: '120' },
+            { id: '316', name: 'Dra. Debora Zari', department: 'Unidad Fiscal', category: 'Unidad Fiscal', phone: '108' },
+            { id: '317', name: 'Mesa de Entrada (2)', department: 'Unidad Fiscal', category: 'Unidad Fiscal', phone: '102' },
+            { id: '318', name: 'Administrativo (2)', department: 'Unidad Fiscal', category: 'Unidad Fiscal', phone: '105' },
+            { id: '319', name: 'Contadores MPF (Quevedo/Butta)', department: 'Unidad Fiscal', category: 'Unidad Fiscal', phone: '4209671 – Int 35/48' },
+            { id: '320', name: 'Delitos Complejos', department: 'Unidad Fiscal', category: 'Unidad Fiscal', phone: '155096144' },
+            { id: '321', name: 'Mesa de Entrada MPF', department: 'Mariano Roca Nazar', category: 'Unidad Fiscal', phone: '343 4 612 121' },
+        ];
+
+        function App() {
+            // Cargar datos guardados si existen, sino usar los iniciales
+            const [contacts, setContacts] = useState(() => {
+                const saved = localStorage.getItem('agenda-judicial-datos');
+                if (saved) {
+                    try { return JSON.parse(saved); } catch (e) { return initialContacts; }
+                }
+                return initialContacts;
+            });
+            
+            const [searchTerm, setSearchTerm] = useState('');
+            const [selectedCategory, setSelectedCategory] = useState('Todas');
+            
+            const [isModalOpen, setIsModalOpen] = useState(false);
+            const [currentContact, setCurrentContact] = useState(null);
+            const [formData, setFormData] = useState({ name: '', department: '', phone: '', category: '' });
+            
+            const [contactToDelete, setContactToDelete] = useState(null);
+
+            // Guardar automáticamente cada vez que los contactos cambian
+            useEffect(() => {
+                localStorage.setItem('agenda-judicial-datos', JSON.stringify(contacts));
+            }, [contacts]);
+
+            const categories = useMemo(() => {
+                const uniqueCategories = [...new Set(contacts.map(c => c.category).filter(Boolean))];
+                return uniqueCategories.sort();
+            }, [contacts]);
+
+            const filteredContacts = useMemo(() => {
+                const term = searchTerm.toLowerCase();
+                return contacts.filter(contact => {
+                    const matchesSearch = 
+                        contact.name.toLowerCase().includes(term) ||
+                        contact.department.toLowerCase().includes(term) ||
+                        contact.phone.toLowerCase().includes(term);
+                    
+                    const matchesCategory = selectedCategory === 'Todas' || contact.category === selectedCategory;
+                    return matchesSearch && matchesCategory;
+                });
+            }, [contacts, searchTerm, selectedCategory]);
+
+            const handleOpenModal = (contact = null) => {
+                if (contact) {
+                    setCurrentContact(contact);
+                    setFormData({ ...contact });
+                } else {
+                    setCurrentContact(null);
+                    setFormData({ name: '', department: '', phone: '', category: categories[0] || '' });
+                }
+                setIsModalOpen(true);
+            };
+
+            const handleCloseModal = () => {
+                setIsModalOpen(false);
+                setCurrentContact(null);
+            };
+
+            const handleChange = (e) => {
+                const { name, value } = e.target;
+                setFormData(prev => ({ ...prev, [name]: value }));
+            };
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                if (currentContact) {
+                    setContacts(contacts.map(c => c.id === currentContact.id ? { ...formData, id: c.id } : c));
+                } else {
+                    const newContact = { ...formData, id: Date.now().toString() };
+                    setContacts([newContact, ...contacts]); // Agregar al principio
+                }
+                handleCloseModal();
+            };
+
+            const handleDelete = (contact) => {
+                setContactToDelete(contact);
+            };
+
+            const confirmDelete = () => {
+                if (contactToDelete) {
+                    setContacts(contacts.filter(c => c.id !== contactToDelete.id));
+                    setContactToDelete(null);
+                }
+            };
+
+            // Para que en celular al hacer click en un teléfono se abra la app de llamadas
+            const handleCall = (phone) => {
+                // Si son números internos cortos, no hace la llamada directa, pero si es largo, sí.
+                // Aquí simplemente quitamos letras o espacios para formar el link 'tel:'
+                const cleanPhone = phone.replace(/[^\d+]/g, '');
+                if(cleanPhone.length > 3) {
+                   window.location.href = `tel:${cleanPhone}`;
+                }
+            };
+
+            return (
+                <div className="min-h-screen pb-10">
+                    {/* Header optimizado para celular */}
+                    <header className="bg-sky-800 text-white shadow-md sticky top-0 z-10">
+                        <div className="px-4 py-4 sm:py-6 max-w-6xl mx-auto">
+                            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center gap-2 sm:gap-3">
+                                <IconBuilding className="w-6 h-6 sm:w-8 sm:h-8" />
+                                <span className="truncate">Agenda Judicial</span>
+                            </h1>
+                            <p className="mt-1 text-xs sm:text-sm text-sky-100 opacity-90 truncate">
+                                Provincia de Entre Ríos ({contacts.length} internos)
+                            </p>
+                        </div>
+                    </header>
+
+                    <main className="max-w-6xl mx-auto px-4 py-4 sm:py-8">
+                        {/* Controles de Búsqueda y Añadir */}
+                        <div className="flex flex-col gap-3 mb-6">
+                            
+                            {/* Búsqueda */}
+                            <div className="relative w-full shadow-sm">
+                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <IconSearch className="h-5 w-5 text-gray-400" />
+                                </div>
+                                <input
+                                    type="text"
+                                    className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-sky-500 text-base"
+                                    placeholder="Buscar nombre, área o interno..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                />
+                            </div>
+                            
+                            <div className="flex gap-2">
+                                {/* Filtro Categoría */}
+                                <div className="relative w-2/3 shadow-sm">
+                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <IconFilter className="h-5 w-5 text-gray-400" />
+                                    </div>
+                                    <select
+                                        className="block w-full pl-10 pr-8 py-3 border border-gray-300 rounded-lg bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-sky-500 appearance-none text-base"
+                                        value={selectedCategory}
+                                        onChange={(e) => setSelectedCategory(e.target.value)}
+                                    >
+                                        <option value="Todas">Todas las áreas</option>
+                                        {categories.map((cat, idx) => (
+                                            <option key={idx} value={cat}>{cat}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                {/* Botón Nuevo */}
+                                <button
+                                    onClick={() => handleOpenModal()}
+                                    className="w-1/3 flex items-center justify-center gap-1 bg-sky-600 hover:bg-sky-700 text-white rounded-lg shadow-sm font-medium transition-colors text-sm"
+                                >
+                                    <IconPlus className="w-5 h-5" />
+                                    <span className="hidden sm:inline">Nuevo</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Lista de Contactos (Estilo Tarjeta para Móvil) */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {filteredContacts.length > 0 ? (
+                                filteredContacts.map((contact) => (
+                                    <div key={contact.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex flex-col gap-3">
+                                        <div className="flex justify-between items-start">
+                                            <div className="flex gap-3 items-center">
+                                                <div className="h-10 w-10 bg-sky-100 rounded-full flex items-center justify-center text-sky-600 flex-shrink-0">
+                                                    <IconUser className="w-5 h-5" />
+                                                </div>
+                                                <div>
+                                                    <h3 className="font-bold text-gray-900 leading-tight">{contact.name}</h3>
+                                                    <div className="text-xs text-gray-500 mt-0.5">{contact.department}</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="flex justify-between items-end mt-2 pt-3 border-t border-gray-100">
+                                            <div className="flex flex-col gap-2 items-start">
+                                                <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-600 border border-gray-200">
+                                                    <IconTag className="w-3 h-3" /> {contact.category}
+                                                </span>
+                                                <button 
+                                                    onClick={() => handleCall(contact.phone)}
+                                                    className="px-3 py-1.5 flex text-sm font-bold rounded-lg bg-green-100 text-green-800 items-center gap-2 active:bg-green-200 transition-colors"
+                                                >
+                                                    <IconPhone className="w-4 h-4" /> {contact.phone}
+                                                </button>
+                                            </div>
+                                            
+                                            <div className="flex gap-1">
+                                                <button onClick={() => handleOpenModal(contact)} className="p-2 text-sky-600 bg-sky-50 rounded-lg active:bg-sky-100" title="Editar">
+                                                    <IconEdit className="w-4 h-4" />
+                                                </button>
+                                                <button onClick={() => handleDelete(contact)} className="p-2 text-red-500 bg-red-50 rounded-lg active:bg-red-100" title="Eliminar">
+                                                    <IconTrash className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="col-span-full py-12 text-center text-gray-500 bg-white rounded-xl border border-gray-200">
+                                    <div className="flex flex-col items-center justify-center">
+                                        <IconSearch className="w-10 h-10 text-gray-300 mb-3" />
+                                        <p className="text-lg font-medium">No se encontraron resultados</p>
+                                        <p className="text-sm mt-1">Intenta ajustando el filtro.</p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </main>
+
+                    {/* Modal Crear/Editar */}
+                    {isModalOpen && (
+                        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-gray-900 bg-opacity-50 p-4">
+                            <div className="bg-white rounded-xl w-full max-w-md overflow-hidden shadow-2xl animate-[translate-y_0.2s_ease-out]">
+                                <div className="px-5 py-4 border-b border-gray-100 flex justify-between items-center">
+                                    <h3 className="text-lg font-bold text-gray-900">
+                                        {currentContact ? 'Editar Contacto' : 'Nuevo Contacto'}
+                                    </h3>
+                                    <button onClick={handleCloseModal} className="text-gray-400 p-1 rounded-full hover:bg-gray-100">
+                                        <IconX className="w-6 h-6" />
+                                    </button>
+                                </div>
+                                <form onSubmit={handleSubmit} className="p-5">
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Nombre / Titular</label>
+                                            <input type="text" name="name" required className="w-full px-3 py-2 border border-gray-300 rounded-lg text-base focus:ring-2 focus:ring-sky-500 outline-none" placeholder="Ej. Dr. Pérez, Juan" value={formData.name} onChange={handleChange} />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Categoría</label>
+                                            <input type="text" list="category-options" name="category" required className="w-full px-3 py-2 border border-gray-300 rounded-lg text-base focus:ring-2 focus:ring-sky-500 outline-none" placeholder="Elige o escribe una nueva" value={formData.category} onChange={handleChange} />
+                                            <datalist id="category-options">
+                                                {categories.map((cat, idx) => <option key={idx} value={cat} />)}
+                                            </datalist>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Área / Dependencia</label>
+                                            <input type="text" name="department" required className="w-full px-3 py-2 border border-gray-300 rounded-lg text-base focus:ring-2 focus:ring-sky-500 outline-none" placeholder="Ej. Juzgado Civil Nº 1" value={formData.department} onChange={handleChange} />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono / Interno</label>
+                                            <input type="text" name="phone" required className="w-full px-3 py-2 border border-gray-300 rounded-lg text-base focus:ring-2 focus:ring-sky-500 outline-none" placeholder="Ej. 264 o 4209397" value={formData.phone} onChange={handleChange} />
+                                        </div>
+                                    </div>
+                                    <div className="mt-6 flex gap-3">
+                                        <button type="button" onClick={handleCloseModal} className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-lg font-medium active:bg-gray-200">Cancelar</button>
+                                        <button type="submit" className="flex-1 py-3 bg-sky-600 text-white rounded-lg font-medium active:bg-sky-700">Guardar</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Modal Confirmar Eliminación */}
+                    {contactToDelete && (
+                        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-gray-900 bg-opacity-50 p-4">
+                            <div className="bg-white rounded-xl w-full max-w-sm overflow-hidden shadow-2xl p-6 text-center">
+                                <div className="mx-auto w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mb-4">
+                                    <IconTrash className="w-6 h-6 text-red-600" />
+                                </div>
+                                <h3 className="text-xl font-bold text-gray-900 mb-2">Eliminar Contacto</h3>
+                                <p className="text-gray-500 mb-6 text-sm">¿Estás seguro de eliminar a <strong>{contactToDelete.name}</strong>? Esta acción no se puede deshacer.</p>
+                                <div className="flex gap-3">
+                                    <button type="button" onClick={() => setContactToDelete(null)} className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-lg font-medium active:bg-gray-200">Cancelar</button>
+                                    <button type="button" onClick={confirmDelete} className="flex-1 py-3 bg-red-600 text-white rounded-lg font-medium active:bg-red-700">Eliminar</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
