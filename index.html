@@ -19,16 +19,54 @@
         /* Mejoras táctiles para celular */
         input, select, button { touch-action: manipulation; }
         body { -webkit-tap-highlight-color: transparent; }
+        .cloud-sync-pulse { animation: pulse-green 2s infinite; }
+        @keyframes pulse-green {
+            0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); }
+            70% { box-shadow: 0 0 0 6px rgba(34, 197, 94, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+        }
     </style>
 </head>
 <body class="bg-slate-100 text-slate-800 font-sans antialiased">
 
     <div id="root"></div>
 
-    <script type="text/babel">
+    <!-- Usamos data-type="module" para poder importar librerías de la nube (Firebase) -->
+    <script type="text/babel" data-type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
         const { useState, useMemo, useEffect } = React;
 
-        // --- Íconos en formato SVG para no depender de librerías externas ---
+        // --- Configuración de la Nube ---
+        // Aquí detectamos si estamos en el entorno de prueba o si necesitas tu propia cuenta para GitHub Pages
+        const isCanvasEnv = typeof __firebase_config !== 'undefined';
+        
+        // ¡ATENCIÓN! Si lo subes a GitHub Pages, debes reemplazar las comillas vacías con los datos 
+        // de tu propio proyecto gratuito de Firebase (https://firebase.google.com/)
+        const externalFirebaseConfig = {
+		apiKey: "AIzaSyDq75qtUrw-dUUYS3ocAkFvbl573JXGPGY",
+  authDomain: "agendajudicial-9e6e0.firebaseapp.com",
+  projectId: "agendajudicial-9e6e0",
+  storageBucket: "agendajudicial-9e6e0.firebasestorage.app",
+  messagingSenderId: "27812967372",
+  appId: "1:27812967372:web:be4f4053c7ad01815ae369"
+
+        };
+
+        const firebaseConfig = isCanvasEnv ? JSON.parse(__firebase_config) : externalFirebaseConfig;
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'agenda-judicial-compartida';
+        
+        let app, auth, db;
+        // Solo inicializamos si hay una configuración válida
+        if (firebaseConfig && firebaseConfig.projectId) {
+            app = initializeApp(firebaseConfig);
+            auth = getAuth(app);
+            db = getFirestore(app);
+        }
+
+        // --- Íconos SVG ---
         const IconBuilding = ({className="w-5 h-5"}) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><path d="M9 22v-4h6v4"></path><path d="M8 6h.01"></path><path d="M16 6h.01"></path><path d="M12 6h.01"></path><path d="M12 10h.01"></path><path d="M12 14h.01"></path><path d="M16 10h.01"></path><path d="M16 14h.01"></path><path d="M8 10h.01"></path><path d="M8 14h.01"></path></svg>);
         const IconSearch = ({className="w-5 h-5"}) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>);
         const IconFilter = ({className="w-5 h-5"}) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>);
@@ -39,8 +77,10 @@
         const IconEdit = ({className="w-5 h-5"}) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>);
         const IconTrash = ({className="w-5 h-5"}) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>);
         const IconX = ({className="w-5 h-5"}) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>);
+        const IconCloudSync = ({className="w-4 h-4"}) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"></path><path d="M12 12v9"></path><path d="M8 17l4-4 4 4"></path></svg>);
+        const IconCloudOff = ({className="w-4 h-4"}) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22.61 16.95A5 5 0 0 0 18 10h-1.26a8 8 0 0 0-7.05-6M5 5a8 8 0 0 0 4 15h9a5 5 0 0 0 1.7-.3"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>);
 
-        // Datos Iniciales
+        // Datos Iniciales (Solo se usan la primera vez que se abre la app si la nube está vacía)
         const initialContacts = [
             { id: '1', name: 'Dr. Portela Leonardo', department: 'Sala Civil - Despacho', category: 'Presidencia', phone: '264' },
             { id: '2', name: 'Eugenia Schonfel', department: 'Asistente Presidencia', category: 'Presidencia', phone: '264' },
@@ -366,28 +406,91 @@
         ];
 
         function App() {
-            // Cargar datos guardados si existen, sino usar los iniciales
-            const [contacts, setContacts] = useState(() => {
-                const saved = localStorage.getItem('agenda-judicial-datos');
-                if (saved) {
-                    try { return JSON.parse(saved); } catch (e) { return initialContacts; }
-                }
-                return initialContacts;
-            });
-            
+            // Estados principales
+            const [contacts, setContacts] = useState(initialContacts);
             const [searchTerm, setSearchTerm] = useState('');
             const [selectedCategory, setSelectedCategory] = useState('Todas');
-            
             const [isModalOpen, setIsModalOpen] = useState(false);
             const [currentContact, setCurrentContact] = useState(null);
             const [formData, setFormData] = useState({ name: '', department: '', phone: '', category: '' });
-            
             const [contactToDelete, setContactToDelete] = useState(null);
+            
+            // Estados para la base de datos en la nube
+            const [user, setUser] = useState(null);
+            const [isSyncing, setIsSyncing] = useState(false);
+            const [hasCloudConfig, setHasCloudConfig] = useState(false);
 
-            // Guardar automáticamente cada vez que los contactos cambian
+            // 1. Iniciar sesión anónima automáticamente
             useEffect(() => {
-                localStorage.setItem('agenda-judicial-datos', JSON.stringify(contacts));
-            }, [contacts]);
+                if (!auth) {
+                    // Si no hay configuración de base de datos válida, caemos a almacenamiento local (sin red)
+                    const saved = localStorage.getItem('agenda-judicial-datos');
+                    if (saved) {
+                        try { setContacts(JSON.parse(saved)); } catch (e) {}
+                    }
+                    return;
+                }
+
+                setHasCloudConfig(true);
+                const initAuth = async () => {
+                    try {
+                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                            await signInWithCustomToken(auth, __initial_auth_token);
+                        } else {
+                            await signInAnonymously(auth);
+                        }
+                    } catch (error) {
+                        console.error("Error al autenticar", error);
+                    }
+                };
+                initAuth();
+                
+                const unsubscribe = onAuthStateChanged(auth, setUser);
+                return () => unsubscribe();
+            }, []);
+
+            // 2. Escuchar cambios de la nube en tiempo real (Sincronización)
+            useEffect(() => {
+                if (!user || !db) return;
+
+                // Apuntamos al "directorio" público en la nube
+                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'agenda', 'directory');
+                setIsSyncing(true);
+
+                const unsubscribe = onSnapshot(docRef, (docSnap) => {
+                    if (docSnap.exists()) {
+                        setContacts(docSnap.data().contacts);
+                    } else {
+                        // Si está vacío, subimos los datos iniciales por única vez
+                        setDoc(docRef, { contacts: initialContacts }).catch(console.error);
+                    }
+                    setIsSyncing(false);
+                }, (error) => {
+                    console.error("Error al sincronizar datos:", error);
+                    setIsSyncing(false);
+                });
+
+                return () => unsubscribe();
+            }, [user]);
+
+            // 3. Función auxiliar para guardar cambios en la nube
+            const updateCloudContacts = async (newContacts) => {
+                setContacts(newContacts); // Se actualiza la pantalla al instante
+                
+                if (db && user) {
+                    setIsSyncing(true);
+                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'agenda', 'directory');
+                    try {
+                        await setDoc(docRef, { contacts: newContacts });
+                    } catch (error) {
+                        console.error("Error guardando en la nube:", error);
+                    }
+                    setIsSyncing(false);
+                } else {
+                    // Guardado local de respaldo si la base de datos no está configurada
+                    localStorage.setItem('agenda-judicial-datos', JSON.stringify(newContacts));
+                }
+            };
 
             const categories = useMemo(() => {
                 const uniqueCategories = [...new Set(contacts.map(c => c.category).filter(Boolean))];
@@ -430,12 +533,14 @@
 
             const handleSubmit = (e) => {
                 e.preventDefault();
+                let newContactsArray;
                 if (currentContact) {
-                    setContacts(contacts.map(c => c.id === currentContact.id ? { ...formData, id: c.id } : c));
+                    newContactsArray = contacts.map(c => c.id === currentContact.id ? { ...formData, id: c.id } : c);
                 } else {
                     const newContact = { ...formData, id: Date.now().toString() };
-                    setContacts([newContact, ...contacts]); // Agregar al principio
+                    newContactsArray = [newContact, ...contacts];
                 }
+                updateCloudContacts(newContactsArray);
                 handleCloseModal();
             };
 
@@ -445,15 +550,13 @@
 
             const confirmDelete = () => {
                 if (contactToDelete) {
-                    setContacts(contacts.filter(c => c.id !== contactToDelete.id));
+                    const newContactsArray = contacts.filter(c => c.id !== contactToDelete.id);
+                    updateCloudContacts(newContactsArray);
                     setContactToDelete(null);
                 }
             };
 
-            // Para que en celular al hacer click en un teléfono se abra la app de llamadas
             const handleCall = (phone) => {
-                // Si son números internos cortos, no hace la llamada directa, pero si es largo, sí.
-                // Aquí simplemente quitamos letras o espacios para formar el link 'tel:'
                 const cleanPhone = phone.replace(/[^\d+]/g, '');
                 if(cleanPhone.length > 3) {
                    window.location.href = `tel:${cleanPhone}`;
@@ -462,24 +565,37 @@
 
             return (
                 <div className="min-h-screen pb-10">
-                    {/* Header optimizado para celular */}
                     <header className="bg-sky-800 text-white shadow-md sticky top-0 z-10">
-                        <div className="px-4 py-4 sm:py-6 max-w-6xl mx-auto">
-                            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center gap-2 sm:gap-3">
-                                <IconBuilding className="w-6 h-6 sm:w-8 sm:h-8" />
-                                <span className="truncate">Agenda Judicial</span>
-                            </h1>
-                            <p className="mt-1 text-xs sm:text-sm text-sky-100 opacity-90 truncate">
-                                Provincia de Entre Ríos ({contacts.length} internos)
-                            </p>
+                        <div className="px-4 py-4 sm:py-5 max-w-6xl mx-auto flex flex-col sm:flex-row justify-between sm:items-center gap-2">
+                            <div>
+                                <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
+                                    <IconBuilding className="w-6 h-6" />
+                                    <span className="truncate">Agenda Judicial</span>
+                                </h1>
+                                <p className="mt-1 text-xs text-sky-100 opacity-90 truncate">
+                                    Entre Ríos ({contacts.length} internos)
+                                </p>
+                            </div>
+                            
+                            {/* Indicador de Nube */}
+                            <div className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full ${hasCloudConfig ? (isSyncing ? 'bg-sky-700/50' : 'bg-green-500/20 text-green-100 cloud-sync-pulse') : 'bg-gray-600/50 text-gray-200'}`}>
+                                {hasCloudConfig ? (
+                                    <>
+                                        <IconCloudSync className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
+                                        <span>{isSyncing ? 'Sincronizando...' : 'En la nube'}</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <IconCloudOff className="w-4 h-4" />
+                                        <span>Local (Sin sincronizar)</span>
+                                    </>
+                                )}
+                            </div>
                         </div>
                     </header>
 
                     <main className="max-w-6xl mx-auto px-4 py-4 sm:py-8">
-                        {/* Controles de Búsqueda y Añadir */}
                         <div className="flex flex-col gap-3 mb-6">
-                            
-                            {/* Búsqueda */}
                             <div className="relative w-full shadow-sm">
                                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                     <IconSearch className="h-5 w-5 text-gray-400" />
@@ -494,7 +610,6 @@
                             </div>
                             
                             <div className="flex gap-2">
-                                {/* Filtro Categoría */}
                                 <div className="relative w-2/3 shadow-sm">
                                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                         <IconFilter className="h-5 w-5 text-gray-400" />
@@ -511,7 +626,6 @@
                                     </select>
                                 </div>
 
-                                {/* Botón Nuevo */}
                                 <button
                                     onClick={() => handleOpenModal()}
                                     className="w-1/3 flex items-center justify-center gap-1 bg-sky-600 hover:bg-sky-700 text-white rounded-lg shadow-sm font-medium transition-colors text-sm"
@@ -522,7 +636,6 @@
                             </div>
                         </div>
 
-                        {/* Lista de Contactos (Estilo Tarjeta para Móvil) */}
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             {filteredContacts.length > 0 ? (
                                 filteredContacts.map((contact) => (
@@ -546,7 +659,7 @@
                                                 </span>
                                                 <button 
                                                     onClick={() => handleCall(contact.phone)}
-                                                    className="px-3 py-1.5 flex text-sm font-bold rounded-lg bg-green-100 text-green-800 items-center gap-2 active:bg-green-200 transition-colors"
+                                                    className="px-3 py-1.5 flex text-sm font-bold rounded-lg bg-green-100 text-green-800 items-center gap-2 active:bg-green-200 transition-colors cursor-pointer"
                                                 >
                                                     <IconPhone className="w-4 h-4" /> {contact.phone}
                                                 </button>
@@ -575,7 +688,7 @@
                         </div>
                     </main>
 
-                    {/* Modal Crear/Editar */}
+                    {/* Modales idénticos a la versión anterior */}
                     {isModalOpen && (
                         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-gray-900 bg-opacity-50 p-4">
                             <div className="bg-white rounded-xl w-full max-w-md overflow-hidden shadow-2xl animate-[translate-y_0.2s_ease-out]">
@@ -618,7 +731,6 @@
                         </div>
                     )}
 
-                    {/* Modal Confirmar Eliminación */}
                     {contactToDelete && (
                         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-gray-900 bg-opacity-50 p-4">
                             <div className="bg-white rounded-xl w-full max-w-sm overflow-hidden shadow-2xl p-6 text-center">
