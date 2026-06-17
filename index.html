@@ -8,7 +8,7 @@
     <!-- Tailwind CSS para los estilos -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- React y ReactDOM -->
+    <!-- React y ReactDOM - VERSIONES COMPATIBLES CON MÓDULOS ES -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     
@@ -62,8 +62,9 @@
 
     <div id="root"></div>
 
-    <!-- Usamos data-type="module" para poder importar librerías de la nube (Firebase) -->
-    <script type="text/babel" data-type="module">
+    <!-- CAMBIO CLAVE: Usamos data-presets="env,react" para forzar el runtime clásico de JSX -->
+    <!-- Esto hace que Babel use React.createElement() en lugar de intentar importar react/jsx-runtime -->
+    <script type="text/babel" data-presets="env,react" data-type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
