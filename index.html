@@ -8,9 +8,18 @@
     <!-- Tailwind CSS para los estilos -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- React y ReactDOM - VERSIONES COMPATIBLES CON MÓDULOS ES -->
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- IMPORTMAP: Le dice al navegador dónde encontrar React -->
+    <script type="importmap">
+    {
+        "imports": {
+            "react": "https://esm.sh/react@18.2.0",
+            "react-dom": "https://esm.sh/react-dom@18.2.0",
+            "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+            "react/jsx-runtime": "https://esm.sh/react@18.2.0/jsx-runtime",
+            "react/jsx-dev-runtime": "https://esm.sh/react@18.2.0/jsx-dev-runtime"
+        }
+    }
+    </script>
     
     <!-- Babel para compilar JSX en el navegador -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -62,14 +71,13 @@
 
     <div id="root"></div>
 
-    <!-- CAMBIO CLAVE: Usamos data-presets="env,react" para forzar el runtime clásico de JSX -->
-    <!-- Esto hace que Babel use React.createElement() en lugar de intentar importar react/jsx-runtime -->
-    <script type="text/babel" data-presets="env,react" data-type="module">
+    <!-- Script principal con data-type="module" para usar importmap -->
+    <script type="text/babel" data-type="module" data-presets="react">
+        import React, { useState, useMemo, useEffect, useCallback } from 'react';
+        import { createRoot } from 'react-dom/client';
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        const { useState, useMemo, useEffect, useCallback } = React;
 
         // --- Seguridad: Hash SHA-256 de la contraseña ---
         // Hash correspondiente a 'agenda2025'
@@ -92,11 +100,8 @@
         const IconCheck = ({className="w-5 h-5"}) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>);
 
         // --- Configuración de la Nube ---
-        // Aquí detectamos si estamos en el entorno de prueba o si necesitas tu propia cuenta para GitHub Pages
         const isCanvasEnv = typeof __firebase_config !== 'undefined';
         
-        // ¡ATENCIÓN! Si lo subes a GitHub Pages, debes reemplazar las comillas vacías con los datos 
-        // de tu propio proyecto gratuito de Firebase (https://firebase.google.com/)
         const externalFirebaseConfig = {
             apiKey: "AIzaSyDq75qtUrw-dUUYS3ocAkFvbl573JXGPGY",
             authDomain: "agendajudicial-9e6e0.firebaseapp.com",
@@ -110,7 +115,6 @@
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'agenda-judicial-compartida';
         
         let app, auth, db;
-        // Solo inicializamos si hay una configuración válida
         if (firebaseConfig && firebaseConfig.projectId) {
             app = initializeApp(firebaseConfig);
             auth = getAuth(app);
@@ -131,7 +135,7 @@
         const IconCloudSync = ({className="w-4 h-4"}) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"></path><path d="M12 12v9"></path><path d="M8 17l4-4 4 4"></path></svg>);
         const IconCloudOff = ({className="w-4 h-4"}) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22.61 16.95A5 5 0 0 0 18 10h-1.26a8 8 0 0 0-7.05-6M5 5a8 8 0 0 0 4 15h9a5 5 0 0 0 1.7-.3"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>);
 
-        // Datos Iniciales (Solo se usan la primera vez que se abre la app si la nube está vacía)
+        // Datos Iniciales
         const initialContacts = [
             { id: '1', name: 'Dr. Portela Leonardo', department: 'Sala Civil - Despacho', category: 'Presidencia', phone: '264' },
             { id: '2', name: 'Eugenia Schonfel', department: 'Asistente Presidencia', category: 'Presidencia', phone: '264' },
@@ -486,12 +490,10 @@
 
             return (
                 <div className="login-bg flex items-center justify-center p-4">
-                    {/* Círculos decorativos de fondo */}
                     <div className="absolute top-[-10%] left-[-10%] w-72 h-72 bg-sky-400/10 rounded-full blur-3xl"></div>
                     <div className="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-blue-600/10 rounded-full blur-3xl"></div>
 
                     <div className={`login-card rounded-2xl w-full max-w-sm p-8 login-fadeIn ${shake ? 'login-shake' : ''}`}>
-                        {/* Logo / Ícono */}
                         <div className="flex flex-col items-center mb-8">
                             <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mb-4 shadow-lg">
                                 <IconBuilding className="w-9 h-9 text-white" />
@@ -549,7 +551,6 @@
         }
 
         function App() {
-            // Estado de autenticación
             const [isAuthenticated, setIsAuthenticated] = useState(() => {
                 return sessionStorage.getItem('agenda-auth') === 'true';
             });
@@ -559,7 +560,6 @@
                 setIsAuthenticated(false);
             }, []);
 
-            // Estados principales (TODOS los hooks deben ir ANTES de cualquier return condicional)
             const [contacts, setContacts] = useState(initialContacts);
             const [searchTerm, setSearchTerm] = useState('');
             const [selectedCategory, setSelectedCategory] = useState('Todas');
@@ -568,22 +568,18 @@
             const [formData, setFormData] = useState({ name: '', department: '', phone: '', category: '' });
             const [contactToDelete, setContactToDelete] = useState(null);
 
-            // Estados para gestión de categorías
             const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
             const [editingCategory, setEditingCategory] = useState(null);
             const [editCategoryName, setEditCategoryName] = useState('');
             const [newCategoryName, setNewCategoryName] = useState('');
             const [categoryToDelete, setCategoryToDelete] = useState(null);
             
-            // Estados para la base de datos en la nube
             const [user, setUser] = useState(null);
             const [isSyncing, setIsSyncing] = useState(false);
             const [hasCloudConfig, setHasCloudConfig] = useState(false);
 
-            // 1. Iniciar sesión anónima automáticamente
             useEffect(() => {
                 if (!auth) {
-                    // Si no hay configuración de base de datos válida, caemos a almacenamiento local (sin red)
                     const saved = localStorage.getItem('agenda-judicial-datos');
                     if (saved) {
                         try { setContacts(JSON.parse(saved)); } catch (e) {}
@@ -609,11 +605,9 @@
                 return () => unsubscribe();
             }, []);
 
-            // 2. Escuchar cambios de la nube en tiempo real (Sincronización)
             useEffect(() => {
                 if (!user || !db) return;
 
-                // Apuntamos al "directorio" público en la nube
                 const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'agenda', 'directory');
                 setIsSyncing(true);
 
@@ -621,7 +615,6 @@
                     if (docSnap.exists()) {
                         setContacts(docSnap.data().contacts);
                     } else {
-                        // Si está vacío, subimos los datos iniciales por única vez
                         setDoc(docRef, { contacts: initialContacts }).catch(console.error);
                     }
                     setIsSyncing(false);
@@ -633,9 +626,8 @@
                 return () => unsubscribe();
             }, [user]);
 
-            // 3. Función auxiliar para guardar cambios en la nube
             const updateCloudContacts = async (newContacts) => {
-                setContacts(newContacts); // Se actualiza la pantalla al instante
+                setContacts(newContacts);
                 
                 if (db && user) {
                     setIsSyncing(true);
@@ -647,7 +639,6 @@
                     }
                     setIsSyncing(false);
                 } else {
-                    // Guardado local de respaldo si la base de datos no está configurada
                     localStorage.setItem('agenda-judicial-datos', JSON.stringify(newContacts));
                 }
             };
@@ -658,19 +649,12 @@
             }, [contacts]);
 
             const filteredContacts = useMemo(() => {
-                // Normalizamos el texto (quitamos acentos y pasamos a minúsculas)
                 const normalizeText = (text) => text ? text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() : "";
-                
-                // Dividimos la búsqueda por espacios para obtener un array de palabras
                 const searchWords = searchTerm.trim().split(/\s+/).map(normalizeText).filter(Boolean);
 
                 return contacts.filter(contact => {
-                    // Combinamos toda la info del contacto en un solo texto "buscable"
                     const contactData = normalizeText(`${contact.name} ${contact.department} ${contact.phone} ${contact.category}`);
-                    
-                    // La magia: Verificamos que TODAS las palabras buscadas existan en el contacto (sin importar el orden)
                     const matchesSearch = searchWords.every(word => contactData.includes(word));
-                    
                     const matchesCategory = selectedCategory === 'Todas' || contact.category === selectedCategory;
                     return matchesSearch && matchesCategory;
                 });
@@ -729,14 +713,12 @@
                 }
             };
 
-            // --- Funciones de Gestión de Categorías ---
             const handleRenameCategory = (oldName) => {
                 const trimmed = editCategoryName.trim();
                 if (!trimmed || trimmed === oldName) {
                     setEditingCategory(null);
                     return;
                 }
-                // Verificar que no exista ya
                 if (categories.includes(trimmed)) {
                     alert(`La categoría "${trimmed}" ya existe.`);
                     return;
@@ -756,7 +738,6 @@
                     alert(`La categoría "${trimmed}" ya existe.`);
                     return;
                 }
-                // Crear un contacto placeholder para que la categoría exista
                 const placeholder = {
                     id: Date.now().toString(),
                     name: '(Sin asignar)',
@@ -780,8 +761,6 @@
                 return contacts.filter(c => c.category === cat).length;
             };
 
-
-            // Si no está autenticado, mostrar pantalla de login
             if (!isAuthenticated) {
                 return <LoginScreen onLogin={() => setIsAuthenticated(true)} />;
             }
@@ -800,7 +779,6 @@
                                 </p>
                             </div>
                             
-                            {/* Botón Cerrar Sesión */}
                             <button
                                 onClick={handleLogout}
                                 className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-red-500/20 text-red-100 hover:bg-red-500/30 transition-colors cursor-pointer"
@@ -810,7 +788,6 @@
                                 <span className="hidden sm:inline">Salir</span>
                             </button>
                             
-                            {/* Indicador de Nube */}
                             <div className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full ${hasCloudConfig ? (isSyncing ? 'bg-sky-700/50' : 'bg-green-500/20 text-green-100 cloud-sync-pulse') : 'bg-gray-600/50 text-gray-200'}`}>
                                 {hasCloudConfig ? (
                                     <>
@@ -929,7 +906,6 @@
                         </div>
                     </main>
 
-                    {/* Modales idénticos a la versión anterior */}
                     {isModalOpen && (
                         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-gray-900 bg-opacity-50 p-4">
                             <div className="bg-white rounded-xl w-full max-w-md overflow-hidden shadow-2xl animate-[translate-y_0.2s_ease-out]">
@@ -988,7 +964,6 @@
                         </div>
                     )}
 
-                    {/* Modal de Gestión de Categorías */}
                     {isCategoryModalOpen && (
                         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-gray-900 bg-opacity-50 p-4">
                             <div className="bg-white rounded-xl w-full max-w-md overflow-hidden shadow-2xl max-h-[85vh] flex flex-col">
@@ -1002,7 +977,6 @@
                                     </button>
                                 </div>
 
-                                {/* Agregar nueva categoría */}
                                 <div className="px-5 py-3 border-b border-gray-100 flex-shrink-0">
                                     <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">Nueva categoría</label>
                                     <div className="flex gap-2">
@@ -1024,7 +998,6 @@
                                     </div>
                                 </div>
 
-                                {/* Lista de categorías */}
                                 <div className="overflow-y-auto flex-1 px-5 py-2">
                                     {categories.length === 0 ? (
                                         <div className="py-8 text-center text-gray-400">
@@ -1036,7 +1009,6 @@
                                             {categories.map((cat) => (
                                                 <div key={cat} className="py-2.5 flex items-center gap-2">
                                                     {editingCategory === cat ? (
-                                                        /* Modo edición */
                                                         <div className="flex-1 flex gap-2">
                                                             <input
                                                                 type="text"
@@ -1054,7 +1026,6 @@
                                                             </button>
                                                         </div>
                                                     ) : categoryToDelete === cat ? (
-                                                        /* Modo confirmación eliminar */
                                                         <div className="flex-1">
                                                             <p className="text-sm text-red-600 font-medium mb-1.5">
                                                                 ¿Eliminar "{cat}" y sus {getCategoryContactCount(cat)} contacto(s)?
@@ -1065,7 +1036,6 @@
                                                             </div>
                                                         </div>
                                                     ) : (
-                                                        /* Modo normal */
                                                         <>
                                                             <div className="flex-1 flex items-center gap-2 min-w-0">
                                                                 <IconTag className="w-4 h-4 text-amber-500 flex-shrink-0" />
@@ -1088,7 +1058,6 @@
                                     )}
                                 </div>
 
-                                {/* Pie */}
                                 <div className="px-5 py-3 border-t border-gray-100 flex-shrink-0">
                                     <button
                                         onClick={() => { setIsCategoryModalOpen(false); setEditingCategory(null); setNewCategoryName(''); setCategoryToDelete(null); }}
@@ -1104,7 +1073,7 @@
             );
         }
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
+        const root = createRoot(document.getElementById('root'));
         root.render(<App />);
     </script>
 </body>
